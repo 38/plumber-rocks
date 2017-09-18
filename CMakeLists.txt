@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 2.6)
 project(plumber-rocks)
 
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 macro(FindRocksdb outvar)
 	unset(${outvar}_PREFIX CACHE)
 	find_path(${outvar}_PREFIX NAMES "include/rocksdb/db.h")
@@ -13,8 +15,10 @@ macro(FindRocksdb outvar)
 	set(${outvar}_CFLAGS "-I${${outvar}_PREFIX}/include")
 endmacro(FindRocksdb outvar)
 
-find_file(SERVLET_CMAKE NAMES "lib/plumber/cmake/servlet.cmake")
+set(CFLAGS $ENV{CFLAGS})
+set(LDFLAGS $ENV{LDFLAGS})
 
+find_file(SERVLET_CMAKE NAMES "lib/plumber/cmake/servlet.cmake")
 include(${SERVLET_CMAKE})
 
 file(GLOB_RECURSE SERVLET_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")

@@ -29,6 +29,9 @@ static int _option(pstd_option_data_t data)
 		case 'C':
 			ctx->create_db = 1;
 			break;
+		case 'A':
+			ctx->async_ops = 1;
+			break;
 		default:
 			ERROR_RETURN_LOG(int, "Invalid command line parameter");
 	}
@@ -126,6 +129,14 @@ static pstd_option_t _options[] = {
 		.pattern   = "S",
 		.description = "Indicates we are in the RESTful storage controller mode: rest",
 		.handler   = _mode,
+		.args      = NULL
+	},
+	{
+		.long_opt  = "async",
+		.short_opt = 'A',
+		.pattern   = "",
+		.description = "If the servlet should operate rocksdb with async processor",
+		.handler   = _option,
 		.args      = NULL
 	}
 };
