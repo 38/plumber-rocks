@@ -69,5 +69,11 @@
 }
 .END
 
+.TEXT error_input
+{
+	"command": "SHOULD BE ERROR"
+}
+.END
+
 .STOP
 

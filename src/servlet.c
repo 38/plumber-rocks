@@ -135,9 +135,15 @@ static int _do_simple_mode(context_t* ctx, pstd_type_instance_t* inst)
 	{
 		case 'G' | ('E' << 8) | ('T' << 16) | (' ' << 24):
 			{
-				size_t val_size;
-				char* val = db_read(ctx->db, cmd + 4, keysize - 4, &val_size);
-				if(NULL == val) ERROR_RETURN_LOG(int, "Cannot read data from the RocksDB");
+				char* val;
+				size_t val_size = db_read(ctx->db, cmd + 4, keysize - 4, (void**)&val);
+				if(val_size == ERROR_CODE(size_t)) ERROR_RETURN_LOG(int, "Cannot read data from the RocksDB");
+
+				if(val == NULL) 
+				{
+					LOG_DEBUG("Key not found, exiting");
+					return 0;
+				}
 
 				pstd_string_t* ps = pstd_string_from_onwership_pointer(val, val_size - 1);
 				if(NULL == ps) ERROR_RETURN_LOG(int, "Cannot create result string RLS object");
@@ -191,7 +197,7 @@ static int _exec(void* ctxbuf)
 	if(ERROR_CODE(int) == pstd_type_instance_free(ti))
 		ERROR_RETURN_LOG(int, "Canont dispose the type instance");
 
-	return 0;
+	return rc;
 }
 
 static int _async_setup(async_handle_t* handle, void* asyncbuf, void* ctxbuf)

@@ -15,7 +15,7 @@ macro(FindRocksdb outvar)
 	set(${outvar}_CFLAGS "-I${${outvar}_PREFIX}/include")
 endmacro(FindRocksdb outvar)
 
-set(CFLAGS $ENV{CFLAGS})
+set(CFLAGS "$ENV{CFLAGS} -Wall -Werror")
 set(LDFLAGS $ENV{LDFLAGS})
 
 find_file(SERVLET_CMAKE NAMES "lib/plumber/cmake/servlet.cmake")

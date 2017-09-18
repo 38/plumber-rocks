@@ -98,29 +98,29 @@ int db_release(rocksdb_t* db)
 	return 0;
 }
 
-void* db_read(rocksdb_t* db, const void* key, size_t key_size, size_t* sizebuf)
+size_t db_read(rocksdb_t* db, const void* key, size_t key_size, void** valbuf)
 {
-	void* ret = NULL;
+	size_t ret = 0;
 	char* err = NULL;
-	if(NULL == db || NULL == key || NULL == sizebuf)
-		ERROR_PTR_RETURN_LOG("Invalid arguments");
+	if(NULL == db || NULL == key || NULL == valbuf)
+		ERROR_RETURN_LOG(size_t, "Invalid arguments");
 	rocksdb_readoptions_t* read_options = rocksdb_readoptions_create();
 
 	if(NULL == read_options) ERROR_LOG_GOTO(ERR, "Cannot allocate read options");
 
-	if(NULL == (ret = rocksdb_get(db, read_options, key, key_size, sizebuf, &err)) || NULL != err)
-		ERROR_LOG_GOTO(ERR, "Cannot read the database: %s", err == NULL ? "Unknown rocksdb error" : err);
+	if(NULL == (*valbuf = rocksdb_get(db, read_options, key, key_size, &ret, &err)) && NULL != err)
+		ERROR_LOG_GOTO(ERR, "Cannot read the database: %s", err);
 
 	rocksdb_readoptions_destroy(read_options);
 
 	return ret;
 
 ERR:
-	if(NULL != ret) free(ret);
+	if(NULL != *valbuf) free(*valbuf);
 	if(NULL != err) free(err);
 	if(NULL != read_options) rocksdb_readoptions_destroy(read_options);
 
-	return NULL;
+	return ERROR_CODE(size_t);
 }
 
 int db_write(rocksdb_t* db, const void* key,  size_t key_size, const void* val, size_t val_size)

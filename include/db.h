@@ -24,12 +24,12 @@ int db_release(rocksdb_t* db);
  * @brief Read data from the database
  * @param db The database to read
  * @param key The key we want to read
- * @param sizebuf The buffer used to return the data size
- * @return the read result or NULL on error
+ * @param valbuf The value buffer
+ * @return the size has been read or error code
  * @note The function will creates a new pointer, so the caller should dispose it 
  *       by calling free(mem) after done
  **/
-void* db_read(rocksdb_t* db, const void* key, size_t key_size, size_t* sizebuf);
+size_t db_read(rocksdb_t* db, const void* key, size_t key_size, void** valbuf);
 
 /**
  * @brief Write the data to the database
