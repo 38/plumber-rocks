@@ -1,0 +1,28 @@
+.TEXT put_data
+{
+	"command": "PUT test_key",
+	"data_in": "This is the test data"
+}
+.END
+
+.TEXT get_data
+{
+	"command": "GET test_key"
+}
+.END
+
+.TEXT override_data
+{
+	"command": "PUT test_key",
+	"data_in": "override"
+}
+.END
+
+.TEXT get_overrided_data
+{
+	"command": "GET test_key"
+}
+.END
+
+.STOP
+

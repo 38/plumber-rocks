@@ -60,13 +60,13 @@ static int _init(uint32_t argc, char const* const* argv, void* ctxbuf)
 	}
 	else if(ctx->options.mode == OPTIONS_SIMPLE_MODE)
 	{
-		if(ERROR_CODE(pipe_t) == (ctx->simple_mode.cmd = pipe_define("command", PIPE_INPUT, "plumber/std/request_local/String")))
+		if(ERROR_CODE(pipe_t) == (ctx->simple_mode.cmd = pipe_define("command", PIPE_INPUT,     "plumber/std/request_local/String")))
 			ERROR_RETURN_LOG(int, "Cannot create the command pipe");
 
 		if(ERROR_CODE(pipe_t) == (ctx->simple_mode.data_in = pipe_define("data_in", PIPE_INPUT, "plumber/std/request_local/String")))
 			ERROR_RETURN_LOG(int, "Cannot create the data input pipe");
 
-		if(ERROR_CODE(pipe_t) == (ctx->simple_mode.data_out = pipe_define("data_out", PIPE_OUTPUT, "plubmer/std/request_local/String")))
+		if(ERROR_CODE(pipe_t) == (ctx->simple_mode.data_out = pipe_define("data_out", PIPE_OUTPUT, "plumber/std/request_local/String")))
 			ERROR_RETURN_LOG(int, "Cannot create the data output pipe");
 
 		if(ERROR_CODE(pstd_type_accessor_t) == (ctx->simple_mode.cmd_tk_ac = pstd_type_model_get_accessor(ctx->type_model, ctx->simple_mode.cmd, "token")))
@@ -77,6 +77,10 @@ static int _init(uint32_t argc, char const* const* argv, void* ctxbuf)
 		
 		if(ERROR_CODE(pstd_type_accessor_t) == (ctx->simple_mode.dout_tk_ac = pstd_type_model_get_accessor(ctx->type_model, ctx->simple_mode.data_out, "token")))
 			ERROR_RETURN_LOG(int, "Cannot get the accessor for the RLS token field");
+		
+		if(NULL == (ctx->db = db_acquire(&ctx->options)))
+			ERROR_RETURN_LOG(int, "Cannot acquire the DB instance");
+
 	}
 	else
 		ERROR_RETURN_LOG(int, "Fixme: Currently we only support the REST controller mode");
@@ -102,7 +106,7 @@ static int _unload(void* ctxbuf)
 	return rc;
 }
 
-static const char* _read_string(pstd_type_instance_t* inst, pstd_type_accessor_t accessor)
+static const char* _read_string(pstd_type_instance_t* inst, pstd_type_accessor_t accessor, size_t* sizebuf)
 {
 	scope_token_t token;
 	if(ERROR_CODE(scope_token_t) == (token = PSTD_TYPE_INST_READ_PRIMITIVE(scope_token_t, inst, accessor)))
@@ -111,17 +115,56 @@ static const char* _read_string(pstd_type_instance_t* inst, pstd_type_accessor_t
 	const pstd_string_t* pstr = pstd_string_from_rls(token);
 	if(NULL == pstr) ERROR_PTR_RETURN_LOG("Cannot retrive string object from the RLS");
 
+	if(sizebuf != NULL) *sizebuf = pstd_string_length(pstr);
+
 	return pstd_string_value(pstr);
 
 }
 
 static int _do_simple_mode(context_t* ctx, pstd_type_instance_t* inst)
 {
-	const char* cmd = _read_string(inst, ctx->simple_mode.cmd_tk_ac);
+	size_t keysize;
+	const char* cmd = _read_string(inst, ctx->simple_mode.cmd_tk_ac, &keysize);
 	if(NULL == cmd) ERROR_RETURN_LOG(int, "Cannot read the command string from the RLS");
 
-	/* TODO parse the comamnd string */
-	return 0;
+	uint32_t val = 0, i;
+	for(i = 0; i < 4 && cmd[i]; i ++)
+		val |= (((uint32_t)cmd[i]) << (i * 8));
+
+	switch(val)
+	{
+		case 'G' | ('E' << 8) | ('T' << 16) | (' ' << 24):
+			{
+				size_t val_size;
+				char* val = db_read(ctx->db, cmd + 4, keysize - 4, &val_size);
+				if(NULL == val) ERROR_RETURN_LOG(int, "Cannot read data from the RocksDB");
+
+				pstd_string_t* ps = pstd_string_from_onwership_pointer(val, val_size);
+				if(NULL == ps) ERROR_RETURN_LOG(int, "Cannot create result string RLS object");
+
+				scope_token_t token = pstd_string_commit(ps);
+				if(ERROR_CODE(scope_token_t) == token) ERROR_RETURN_LOG(int, "Cannot commit string object to RLS");
+
+				if(ERROR_CODE(int) == PSTD_TYPE_INST_WRITE_PRIMITIVE(inst, ctx->simple_mode.dout_tk_ac, token))
+					ERROR_RETURN_LOG(int, "Cannot write the RLS token to the output");
+
+				return 0;
+			}
+		case 'P' | ('U' << 8) | ('T' << 16) | (' ' << 24):
+			{
+				size_t val_size;
+				const char* val = _read_string(inst, ctx->simple_mode.din_tk_ac, &val_size);
+
+				if(NULL == val) ERROR_RETURN_LOG(int, "Cannot read the input data");
+
+				if(ERROR_CODE(int) == db_write(ctx->db, cmd + 4, keysize - 4, val, val_size))
+					ERROR_RETURN_LOG(int, "Cannot write Rocksdb");
+
+				return 0;
+			}
+		default:
+			ERROR_RETURN_LOG(int, "Invalid command");
+	}
 }
 
 static int _exec(void* ctxbuf)
