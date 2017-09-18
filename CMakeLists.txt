@@ -13,7 +13,6 @@ macro(FindRocksdb outvar)
 	set(${outvar}_CFLAGS "-I${${outvar}_PREFIX}/include")
 endmacro(FindRocksdb outvar)
 
-
 find_file(SERVLET_CMAKE NAMES "lib/plumber/cmake/servlet.cmake")
 
 include(${SERVLET_CMAKE})
