@@ -115,7 +115,7 @@ static const char* _read_string(pstd_type_instance_t* inst, pstd_type_accessor_t
 	const pstd_string_t* pstr = pstd_string_from_rls(token);
 	if(NULL == pstr) ERROR_PTR_RETURN_LOG("Cannot retrive string object from the RLS");
 
-	if(sizebuf != NULL) *sizebuf = pstd_string_length(pstr);
+	if(sizebuf != NULL) *sizebuf = pstd_string_length(pstr) + 1;
 
 	return pstd_string_value(pstr);
 
@@ -139,7 +139,7 @@ static int _do_simple_mode(context_t* ctx, pstd_type_instance_t* inst)
 				char* val = db_read(ctx->db, cmd + 4, keysize - 4, &val_size);
 				if(NULL == val) ERROR_RETURN_LOG(int, "Cannot read data from the RocksDB");
 
-				pstd_string_t* ps = pstd_string_from_onwership_pointer(val, val_size);
+				pstd_string_t* ps = pstd_string_from_onwership_pointer(val, val_size - 1);
 				if(NULL == ps) ERROR_RETURN_LOG(int, "Cannot create result string RLS object");
 
 				scope_token_t token = pstd_string_commit(ps);
