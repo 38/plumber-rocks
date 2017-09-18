@@ -17,7 +17,8 @@ typedef struct {
 	uint32_t      create_db:1;        /*!< If we need create the DB base */
 	uint32_t      async_ops:1;        /*!< If this servlet runs in async mode */
 	enum {
-		OPTIONS_REST_MODE             /*!< This servlet works on the REST controller mode */
+		OPTIONS_REST_MODE,            /*!< This servlet works on the REST controller mode */
+		OPTIONS_SIMPLE_MODE           /*!< This servlet works on the simple mode */   
 	}             mode;               /*!< The servlet mode */
 	const char*   db_path;            /*!< The data base path */
 	jsonschema_t* schema;             /*!< The schema we are using */

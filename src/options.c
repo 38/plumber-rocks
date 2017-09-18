@@ -71,6 +71,11 @@ static int _mode(pstd_option_data_t data)
 		ctx->mode = OPTIONS_REST_MODE;
 		return 0;
 	}
+	else if(strcmp(mode, "simple") == 0)
+	{
+		ctx->mode = OPTIONS_SIMPLE_MODE;
+		return 0;
+	}
 	else ERROR_RETURN_LOG(int, "Invalid arguments: unrecognized working mode %s", mode);
 }
 
@@ -148,7 +153,7 @@ int options_parse(uint32_t argc, char const* const* argv, options_t* buf)
 	if(ERROR_CODE(int) == pstd_option_sort(_options, sizeof(_options) / sizeof(_options[0])))
 		ERROR_RETURN_LOG(int, "Cannot sort the options");
 
-	buf->mode = OPTIONS_REST_MODE;
+	buf->mode = OPTIONS_SIMPLE_MODE;
 
 	uint32_t rc;
 	if(ERROR_CODE(uint32_t) == (rc = pstd_option_parse(_options, sizeof(_options) / sizeof(_options[0]), argc, argv, buf)))

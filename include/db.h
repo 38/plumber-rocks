@@ -20,4 +20,25 @@ rocksdb_t* db_acquire(const options_t* options);
  **/
 int db_release(rocksdb_t* db);
 
+/**
+ * @brief Read data from the database
+ * @param db The database to read
+ * @param key The key we want to read
+ * @param sizebuf The buffer used to return the data size
+ * @return the read result or NULL on error
+ * @note The function will creates a new pointer, so the caller should dispose it 
+ *       by calling free(mem) after done
+ **/
+void* db_read(rocksdb_t* db, const void* key, size_t key_size, size_t* sizebuf);
+
+/**
+ * @brief Write the data to the database
+ * @param db The database isntance
+ * @param key The key to write
+ * @param key_size The size of the key
+ * @param val_size The value size
+ * @return the status code
+ **/
+int db_write(rocksdb_t* db, const void* key,  size_t key_size, const void* val, size_t val_size);
+
 #endif /* __DB_H__ */

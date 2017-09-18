@@ -97,3 +97,54 @@ int db_release(rocksdb_t* db)
 
 	return 0;
 }
+
+void* db_read(rocksdb_t* db, const void* key, size_t key_size, size_t* sizebuf)
+{
+	void* ret = NULL;
+	char* err = NULL;
+	if(NULL == db || NULL == key || NULL == sizebuf)
+		ERROR_PTR_RETURN_LOG("Invalid arguments");
+	rocksdb_readoptions_t* read_options = rocksdb_readoptions_create();
+
+	if(NULL == read_options) ERROR_LOG_GOTO(ERR, "Cannot allocate read options");
+
+	if(NULL == (ret = rocksdb_get(db, read_options, key, key_size, sizebuf, &err)) || NULL != err)
+		ERROR_LOG_GOTO(ERR, "Cannot read the database: %s", err == NULL ? "Unknown rocksdb error" : err);
+
+	rocksdb_readoptions_destroy(read_options);
+
+	return ret;
+
+ERR:
+	if(NULL != ret) free(ret);
+	if(NULL != err) free(err);
+	if(NULL != read_options) rocksdb_readoptions_destroy(read_options);
+
+	return NULL;
+}
+
+int db_write(rocksdb_t* db, const void* key,  size_t key_size, const void* val, size_t val_size)
+{
+	char* err = NULL;
+
+	if(NULL == db || NULL == key || NULL == val)
+		ERROR_RETURN_LOG(int, "Invalid arguments");
+
+	rocksdb_writeoptions_t* write_options = rocksdb_writeoptions_create();
+
+	if(NULL == write_options) ERROR_LOG_GOTO(ERR, "Cannot allocate write options");
+
+	rocksdb_put(db, write_options, key, key_size, val, val_size, &err);
+
+	if(NULL != err) ERROR_LOG_GOTO(ERR, "Cannot write the data to database: %s", err);
+
+	rocksdb_writeoptions_destroy(write_options);
+
+	return 0;
+
+ERR:
+	if(NULL != err) free(err);
+	if(NULL != write_options) rocksdb_writeoptions_destroy(write_options);
+
+	return ERROR_CODE(int);
+}
