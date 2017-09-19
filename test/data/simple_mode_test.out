@@ -1,0 +1,12 @@
+put_data	{"null": null}
+get_data	{"data_out": "This is the test data"}
+override_data	{"null": null}
+get_overrided_data	{"data_out": "override"}
+write_key_1	{"null": null}
+write_key_1	{"null": null}
+write_key_3	{"null": null}
+get_key_2	{"data_out": "2"}
+get_key_1	{"data_out": "1"}
+get_key_3	{"data_out": "3"}
+get_not_exist_key	{"null": null}
+error_input	{"error": null}
