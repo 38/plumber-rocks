@@ -2,6 +2,7 @@ import json
 import sys
 import subprocess
 import signal
+import os
 def parse_out(outfile, verify, error):
     lines = [line.strip() for line in outfile]
     buf = None
@@ -37,18 +38,20 @@ def test_case(script, servlet_dir, case_name):
                 return False
         return True
     case_name = case_name.rsplit(".", 1)[0]
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    proc = subprocess.Popen(["valgrind", 
-                             "--errors-for-leak-kinds=definite,reachable", 
-                             "--leak-check=full", 
-                             "--error-exitcode=1", 
-                             "pscript", 
-                             script, 
-                             servlet_dir , 
-                             "{case_name}.in".format(case_name = case_name), 
-                             "/dev/stdout"], stdout = subprocess.PIPE)
+    args = ["valgrind", 
+            "--errors-for-leak-kinds=definite", 
+            "--leak-check=full", 
+            "--error-exitcode=1", 
+            "pscript", 
+            script, 
+            servlet_dir , 
+            "{case_name}.in".format(case_name = case_name), 
+            "/dev/stdout"]
+    sys.stderr.write(" ".join(args) + "\n")
+    proc = subprocess.Popen(args, stdout = subprocess.PIPE)
     expected = dict([(lambda (x,y): (x, json.loads(y)))(line.strip().split("\t")) for line in open("{case_name}.out".format(case_name = case_name))])
-    return parse_out(proc.stdout, verify, lambda l, e: None)
+    exit_code = proc.wait()
+    return parse_out(proc.stdout, verify, lambda l, e: None) and exit_code == 0
 
 result = True
 

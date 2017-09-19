@@ -1,3 +1,7 @@
+/**
+ * Copyright (C) 2017, Hao Hou
+ **/
+#include <stdlib.h>
 #include <string.h>
 
 #include <pservlet.h>

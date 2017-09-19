@@ -57,6 +57,7 @@ Makefile
 build.mk
 cmake_install.cmake
 
+*.swn
 *.swo
 *.swp
 
