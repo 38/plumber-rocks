@@ -1,0 +1,79 @@
+.TEXT put_data
+{
+	"command": "PUT test_key",
+	"data_in": "This is the test data"
+}
+.END
+
+.TEXT get_data
+{
+	"command": "GET test_key"
+}
+.END
+
+.TEXT override_data
+{
+	"command": "PUT test_key",
+	"data_in": "override"
+}
+.END
+
+.TEXT get_overrided_data
+{
+	"command": "GET test_key"
+}
+.END
+
+.TEXT write_key_1
+{
+	"command": "PUT key_1",
+	"data_in": "1"
+}
+.END
+
+.TEXT write_key_1
+{
+	"command": "PUT key_2",
+	"data_in": "2"
+}
+.END
+
+.TEXT write_key_3
+{
+	"command": "PUT key_3",
+	"data_in": "3"
+}
+.END
+
+.TEXT get_key_2
+{
+	"command": "GET key_2"
+}
+.END
+
+.TEXT get_key_1
+{
+	"command": "GET key_1"
+}
+.END
+
+.TEXT get_key_3
+{
+	"command": "GET key_3"
+}
+.END
+
+.TEXT get_not_exist_key
+{
+	"command": "GET not_exists"
+}
+.END
+
+.TEXT error_input
+{
+	"command": "SHOULD BE ERROR"
+}
+.END
+
+.STOP
+

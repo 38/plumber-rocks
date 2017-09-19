@@ -111,6 +111,7 @@ int simple_async_setup(simple_t* ctx, pstd_type_instance_t* inst, rocksdb_t* db,
 	async_buf->db = db;
 	async_buf->out_val = NULL;
 	async_buf->in_val = NULL;
+	async_buf->in_val_size = ERROR_CODE(size_t);
 
 	switch(val)
 	{
@@ -121,7 +122,8 @@ int simple_async_setup(simple_t* ctx, pstd_type_instance_t* inst, rocksdb_t* db,
 				ERROR_RETURN_LOG(int, "Cannot read the value string from RLS");
 		case 'G' | ('E' << 8) | ('T' << 16) | (' ' << 24):
 			async_buf->key = (void*)(cmd + 4);
-			async_buf->key_size = keysize;
+			async_buf->key_size = keysize - 4;
+			break;
 		default:
 			ERROR_RETURN_LOG(int, "Invalid arguments");
 	}
@@ -134,7 +136,7 @@ int simple_async_exec(async_handle_t* async_handle, simple_async_buf_t* async_bu
 	if(NULL == async_handle || NULL == async_buf)
 		ERROR_RETURN_LOG(int, "Invalid arguments");
 
-	if(async_buf->in_val == NULL)
+	if(async_buf->in_val == NULL && async_buf->in_val_size == ERROR_CODE(size_t))
 	{
 		/* We need to read the key */
 		async_buf->out_val_size = db_read(async_buf->db, async_buf->key, async_buf->key_size, &async_buf->out_val);

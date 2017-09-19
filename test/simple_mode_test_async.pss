@@ -1,0 +1,36 @@
+#!/usr/bin/env pscript
+import("service");
+import("testbed");
+insmod("mem_pipe");
+insmod("pssm");
+insmod("simulate input=" + argv[2] + " output=" + argv[3] + " label=ROCKSDB");
+
+runtime.servlet.path = argv[1] + ":" + runtime.servlet.path
+
+to_test = {
+	rocksdb := "rocksdb --path /tmp/test.db --create-db --mode simple --async";
+	{
+		(command) -> "command";
+		(data_in) -> "data_in";
+	} rocksdb {
+		"data_out" -> (data_out);
+		"__error__" -> (error);
+		"__null__"  -> (null);
+	};
+};
+
+in_def = {
+	"command" : "plumber/std/request_local/String"
+	"data_in" : "plumber/std/request_local/String"
+};
+
+out_def = {
+	"data_out" : "plumber/std/request_local/String",
+	"error"    : "plumber/base/Raw",
+	"null"     : "plumber/base/Raw"
+};
+
+scheduler.worker.nthreads = 1;
+scheduler.async.nthreads = 1;
+
+Service.start(Testbed.embed(to_test, in_def, out_def));
