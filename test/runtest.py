@@ -59,7 +59,10 @@ def test_case(script, servlet_dir, case_name):
 
 result = True
 
-for i in sys.argv[2:]:
+testlist = sys.argv[2:]
+testlist.sort()
+
+for i in testlist:
     result = result and test_case(sys.argv[1], "bin/rocksdb", i)
 
 shutil.rmtree(dbpath)
