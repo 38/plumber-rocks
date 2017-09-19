@@ -31,3 +31,10 @@ add_custom_target(distclean
 	COMMAND rm -rf CMakeFiles CMakeCache.txt Testing cmake_install.cmake CTestTestfile.cmake Makefile tags bin build.mk
 	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+enable_testing()
+file(GLOB scripts "${CMAKE_CURRENT_SOURCE_DIR}/test/*.pss")
+foreach(script ${scripts})
+	get_filename_component(test_name ${script} NAME_WE)
+	file(GLOB inputs "${CMAKE_CURRENT_SOURCE_DIR}/test/data/${test_name}*.in")
+	add_test(${test_name} python ${CMAKE_CURRENT_SOURCE_DIR}/test/runtest.py ${CMAKE_CURRENT_BINARY_DIR}/bin/rocksdb ${inputs})
+endforeach(script ${scripts})

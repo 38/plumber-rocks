@@ -63,3 +63,7 @@ cmake_install.cmake
 tags
 
 *.psm
+
+CTestTestfile.cmake
+Testing/*
+
