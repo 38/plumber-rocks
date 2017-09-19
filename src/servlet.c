@@ -31,6 +31,13 @@ typedef struct {
 	pstd_type_model_t* type_model;           /*!< The type model */
 } context_t;
 
+typedef struct {
+	int                mode;        /*!< The mode code */
+	union{
+		simple_async_buf_t simple_mode; /*!< The simple mode */
+	};
+} async_buf_t;
+
 
 static int _init(uint32_t argc, char const* const* argv, void* ctxbuf)
 {
@@ -109,12 +116,79 @@ static int _exec(void* ctxbuf)
 
 static int _async_setup(async_handle_t* handle, void* asyncbuf, void* ctxbuf)
 {
-	(void)handle;
-	(void)asyncbuf;
-	(void)ctxbuf;
+	context_t* ctx = (context_t*)ctxbuf;
 
-	return 0;
+	size_t tisize = pstd_type_instance_size(ctx->type_model);
+	if(ERROR_CODE(size_t) == tisize) ERROR_RETURN_LOG(int, "Cannot get the size of the tpye instance");
+	char tibuf[tisize];
+	pstd_type_instance_t* ti = pstd_type_instance_new(ctx->type_model, tibuf);
+	if(NULL == ti) ERROR_RETURN_LOG(int, "Cannot create type instance");
+
+	int rc = ERROR_CODE(int);
+
+	async_buf_t* buf = (async_buf_t*)asyncbuf;
+
+	buf->mode = ctx->options.mode;
+
+	switch(ctx->options.mode)
+	{
+		case OPTIONS_SIMPLE_MODE:
+			rc = simple_async_setup(&ctx->simple_mode, ti, ctx->db, handle, &buf->simple_mode);
+			break;
+		default:
+			LOG_ERROR("Invalid mode");
+	}
+
+	if(ERROR_CODE(int) == pstd_type_instance_free(ti))
+		ERROR_RETURN_LOG(int, "Canont dispose the type instance");
+
+	return rc;
 }
+
+static int _async_exec(async_handle_t* handle, void* asyncbuf)
+{
+	(void)handle;
+	async_buf_t* buf = (async_buf_t*)asyncbuf;
+	switch(buf->mode)
+	{
+		case OPTIONS_SIMPLE_MODE:
+			return simple_async_exec(handle, &buf->simple_mode);
+		default:
+			ERROR_RETURN_LOG(int, "Invalid mode");
+	}
+}
+
+static int _async_cleanup(async_handle_t* handle, void* asyncbuf, void* ctxbuf)
+{
+	context_t* ctx = (context_t*)ctxbuf;
+
+	size_t tisize = pstd_type_instance_size(ctx->type_model);
+	if(ERROR_CODE(size_t) == tisize) ERROR_RETURN_LOG(int, "Cannot get the size of the tpye instance");
+	char tibuf[tisize];
+	pstd_type_instance_t* ti = pstd_type_instance_new(ctx->type_model, tibuf);
+	if(NULL == ti) ERROR_RETURN_LOG(int, "Cannot create type instance");
+
+	int rc = ERROR_CODE(int);
+
+	async_buf_t* buf = (async_buf_t*)asyncbuf;
+
+	buf->mode = ctx->options.mode;
+
+	switch(ctx->options.mode)
+	{
+		case OPTIONS_SIMPLE_MODE:
+			rc = simple_async_cleanup(&ctx->simple_mode, ti, handle, &buf->simple_mode);
+			break;
+		default:
+			LOG_ERROR("Invalid mode");
+	}
+
+	if(ERROR_CODE(int) == pstd_type_instance_free(ti))
+		ERROR_RETURN_LOG(int, "Canont dispose the type instance");
+
+	return rc;
+}
+
 
 SERVLET_DEF = {
 	.desc = "Plumber-RocksDB Binding",
@@ -123,5 +197,8 @@ SERVLET_DEF = {
 	.init = _init,
 	.unload = _unload,
 	.exec   = _exec,
-	.async_setup = _async_setup
+	.async_buf_size = sizeof(async_buf_t),
+	.async_setup = _async_setup,
+	.async_exec  = _async_exec,
+	.async_cleanup = _async_cleanup
 };

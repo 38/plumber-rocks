@@ -138,14 +138,17 @@ int db_write(rocksdb_t* db, const void* key,  size_t key_size, const void* val, 
 {
 	char* err = NULL;
 
-	if(NULL == db || NULL == key || NULL == val)
+	if(NULL == db || NULL == key)
 		ERROR_RETURN_LOG(int, "Invalid arguments");
 
 	rocksdb_writeoptions_t* write_options = rocksdb_writeoptions_create();
 
 	if(NULL == write_options) ERROR_LOG_GOTO(ERR, "Cannot allocate write options");
 
-	rocksdb_put(db, write_options, key, key_size, val, val_size, &err);
+	if(NULL != val)
+		rocksdb_put(db, write_options, key, key_size, val, val_size, &err);
+	else
+		rocksdb_delete(db, write_options, key, key_size, &err);
 
 	if(NULL != err) ERROR_LOG_GOTO(ERR, "Cannot write the data to database: %s", err);
 

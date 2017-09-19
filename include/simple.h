@@ -26,8 +26,10 @@ typedef struct {
 	rocksdb_t*      db;   /*!< The database */
 	const void*     key;  /*!< The key for this data */
 	size_t          key_size; /*!< The key size */
-	void*           val;  /*!< The value pointer, if val is NULL, this means we are performing get operation */
-	size_t          val_size; /*!< The value size, for the get operation, this is input, for put operation, this is output */
+	const void*     in_val;  /*!< The value pointer, if val is NULL, this means we are performing get operation */
+	size_t          in_val_size; /*!< The value size, for the get operation, this is input, for put operation, this is output */
+	void*           out_val;   /*!< The out value bufferr */
+	size_t          out_val_size; /*!< The output value buffer */
 } simple_async_buf_t;
 
 /**
@@ -52,11 +54,12 @@ int simple_sync_exec(simple_t* ctx, pstd_type_instance_t* inst, rocksdb_t* db);
  * @brief Setup the asynchrnozed task execution
  * @param ctx The context
  * @param inst The type instance
+ * @param db The database isntance
  * @param async_handle Current async handle
  * @param async_buf The async buffer
  * @return status code
  **/
-int simple_async_setup(simple_t* ctx, pstd_type_instance_t* inst, async_handle_t* async_handle, simple_async_buf_t* async_buf);
+int simple_async_setup(simple_t* ctx, pstd_type_instance_t* inst, rocksdb_t* db, async_handle_t* async_handle, simple_async_buf_t* async_buf);
 
 /**
  * @brief The execution function
