@@ -28,4 +28,16 @@
 }
 .END
 
+.TEXT remove_key
+{
+	"command": "PUT key_3"
+}
+.END
+
+.TEXT get_key_3_not_exist
+{
+	"command": "GET key_3"
+}
+.END
+
 .STOP

@@ -3,3 +3,5 @@ get_key_2	{"data_out":"2"}
 get_key_1	{"data_out":"1"}
 get_key_3	{"data_out":"3"}
 get_not_exist_key	{"null":null}
+remove_key	{"null":null}
+get_key_3_not_exist	{"null":null}

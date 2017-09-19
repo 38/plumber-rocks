@@ -20,8 +20,6 @@ static inline int rls_read_string(pstd_type_instance_t* inst, pstd_type_accessor
 	if(inst == NULL || retbuf == NULL) ERROR_RETURN_LOG(int, "Invalid arguments");
 
 	scope_token_t token;
-	if(ERROR_CODE(scope_token_t) == (token = PSTD_TYPE_INST_READ_PRIMITIVE(scope_token_t, inst, accessor)))
-	   ERROR_RETURN_LOG(int, "Cannot access token field");
 
 	size_t rc = pstd_type_instance_read(inst, accessor, &token, sizeof(token));
 
