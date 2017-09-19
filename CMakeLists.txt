@@ -18,7 +18,7 @@ endmacro(FindRocksdb outvar)
 set(CFLAGS "$ENV{CFLAGS} -Wall -Werror")
 set(LDFLAGS $ENV{LDFLAGS})
 
-find_file(SERVLET_CMAKE NAMES "lib/plumber/cmake/servlet.cmake")
+find_file(SERVLET_CMAKE NAMES "lib/plumber/cmake/servlet.cmake" HINTS "${PLUMBER_HINT}")
 include(${SERVLET_CMAKE})
 
 file(GLOB_RECURSE SERVLET_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
