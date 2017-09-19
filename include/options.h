@@ -16,6 +16,7 @@ typedef struct {
 	uint32_t      create_time:1;      /*!< If we need the creating time */
 	uint32_t      create_db:1;        /*!< If we need create the DB base */
 	uint32_t      async_ops:1;        /*!< If this servlet runs in async mode */
+	uint32_t      read_only:1;        /*!< If this data base should be opened in readonly mode */
 	enum {
 		OPTIONS_REST_MODE,            /*!< This servlet works on the REST controller mode */
 		OPTIONS_SIMPLE_MODE           /*!< This servlet works on the simple mode */   

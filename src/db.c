@@ -18,11 +18,12 @@
  * @brief A used DB instance
  **/
 typedef struct _db_t {
-	struct _db_t* next;   /*!< The linked list pointer */
-	rocksdb_t*    db;     /*!< The actual DB instance */
+	struct _db_t*      next;   /*!< The linked list pointer */
+	rocksdb_t*         db;     /*!< The actual DB instance */
 	rocksdb_options_t* options; /*!< The database options */
-	const char*   path;   /*!< The path to the DB */
-	uint32_t      refcnt; /*!< How many servlet are using this DB */
+	const char*        path;   /*!< The path to the DB */
+	uint32_t           read_only; /*!< If this is a readonly database */
+	uint32_t           refcnt; /*!< How many servlet are using this DB */
 } _db_t;
 
 static _db_t* _db_list = NULL;
@@ -32,7 +33,7 @@ rocksdb_t* db_acquire(const options_t* options)
 	if(NULL == options) ERROR_PTR_RETURN_LOG( "Invalid arguments");
 
 	_db_t* ptr;
-	for(ptr = _db_list; NULL != _db_list && strcmp(ptr->path, options->db_path) != 0; ptr = ptr->next);
+	for(ptr = _db_list; NULL != _db_list && strcmp(ptr->path, options->db_path) != 0 && ptr->read_only <= options->read_only; ptr = ptr->next);
 
 	if(ptr == NULL)
 	{
@@ -47,8 +48,18 @@ rocksdb_t* db_acquire(const options_t* options)
 		if(options->create_db)
 			rocksdb_options_set_create_if_missing(ptr->options, 1);
 
-		if(NULL == (ptr->db = rocksdb_open(ptr->options, options->db_path, &err)) || err != NULL)
-			ERROR_LOG_GOTO(CREATE_ERR, "Cannot open rocksdb database: %s", err);
+		if(options->read_only)
+		{
+			if(NULL == (ptr->db = rocksdb_open_for_read_only(ptr->options, options->db_path, 0, &err)) || err != NULL)
+				ERROR_LOG_GOTO(CREATE_ERR, "Cannot open rocksdb database in read-only mode: %s", err);
+			ptr->read_only = 1;
+		}
+		else
+		{
+			if(NULL == (ptr->db = rocksdb_open(ptr->options, options->db_path, &err)) || err != NULL)
+				ERROR_LOG_GOTO(CREATE_ERR, "Cannot open rocksdb database: %s", err);
+			ptr->read_only = 0;
+		}
 
 		ptr->next = _db_list;
 		ptr->path = options->db_path;

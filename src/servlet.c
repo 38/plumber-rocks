@@ -67,7 +67,8 @@ static int _init(uint32_t argc, char const* const* argv, void* ctxbuf)
 		if(ERROR_CODE(pipe_t) == (ctx->simple_mode.cmd = pipe_define("command", PIPE_INPUT,     "plumber/std/request_local/String")))
 			ERROR_RETURN_LOG(int, "Cannot create the command pipe");
 
-		if(ERROR_CODE(pipe_t) == (ctx->simple_mode.data_in = pipe_define("data_in", PIPE_INPUT, "plumber/std/request_local/String")))
+		if(ctx->options.read_only == 0 && 
+		   ERROR_CODE(pipe_t) == (ctx->simple_mode.data_in = pipe_define("data_in", PIPE_INPUT, "plumber/std/request_local/String")))
 			ERROR_RETURN_LOG(int, "Cannot create the data input pipe");
 
 		if(ERROR_CODE(pipe_t) == (ctx->simple_mode.data_out = pipe_define("data_out", PIPE_OUTPUT, "plumber/std/request_local/String")))
@@ -76,7 +77,8 @@ static int _init(uint32_t argc, char const* const* argv, void* ctxbuf)
 		if(ERROR_CODE(pstd_type_accessor_t) == (ctx->simple_mode.cmd_tk_ac = pstd_type_model_get_accessor(ctx->type_model, ctx->simple_mode.cmd, "token")))
 			ERROR_RETURN_LOG(int, "Cannot get the accessor for the RLS token field");
 		
-		if(ERROR_CODE(pstd_type_accessor_t) == (ctx->simple_mode.din_tk_ac = pstd_type_model_get_accessor(ctx->type_model, ctx->simple_mode.data_in, "token")))
+		if(ctx->options.read_only == 0 &&
+		   ERROR_CODE(pstd_type_accessor_t) == (ctx->simple_mode.din_tk_ac = pstd_type_model_get_accessor(ctx->type_model, ctx->simple_mode.data_in, "token")))
 			ERROR_RETURN_LOG(int, "Cannot get the accessor for the RLS token field");
 		
 		if(ERROR_CODE(pstd_type_accessor_t) == (ctx->simple_mode.dout_tk_ac = pstd_type_model_get_accessor(ctx->type_model, ctx->simple_mode.data_out, "token")))
@@ -138,40 +140,42 @@ static int _do_simple_mode(context_t* ctx, pstd_type_instance_t* inst)
 	switch(val)
 	{
 		case 'G' | ('E' << 8) | ('T' << 16) | (' ' << 24):
+		{
+			char* val;
+			size_t val_size = db_read(ctx->db, cmd + 4, keysize - 4, (void**)&val);
+			if(val_size == ERROR_CODE(size_t)) ERROR_RETURN_LOG(int, "Cannot read data from the RocksDB");
+
+			if(val == NULL) 
 			{
-				char* val;
-				size_t val_size = db_read(ctx->db, cmd + 4, keysize - 4, (void**)&val);
-				if(val_size == ERROR_CODE(size_t)) ERROR_RETURN_LOG(int, "Cannot read data from the RocksDB");
-
-				if(val == NULL) 
-				{
-					LOG_DEBUG("Key not found, exiting");
-					return 0;
-				}
-
-				pstd_string_t* ps = pstd_string_from_onwership_pointer(val, val_size - 1);
-				if(NULL == ps) ERROR_RETURN_LOG(int, "Cannot create result string RLS object");
-
-				scope_token_t token = pstd_string_commit(ps);
-				if(ERROR_CODE(scope_token_t) == token) ERROR_RETURN_LOG(int, "Cannot commit string object to RLS");
-
-				if(ERROR_CODE(int) == PSTD_TYPE_INST_WRITE_PRIMITIVE(inst, ctx->simple_mode.dout_tk_ac, token))
-					ERROR_RETURN_LOG(int, "Cannot write the RLS token to the output");
-
+				LOG_DEBUG("Key not found, exiting");
 				return 0;
 			}
+
+			pstd_string_t* ps = pstd_string_from_onwership_pointer(val, val_size - 1);
+			if(NULL == ps) ERROR_RETURN_LOG(int, "Cannot create result string RLS object");
+
+			scope_token_t token = pstd_string_commit(ps);
+			if(ERROR_CODE(scope_token_t) == token) ERROR_RETURN_LOG(int, "Cannot commit string object to RLS");
+
+			if(ERROR_CODE(int) == PSTD_TYPE_INST_WRITE_PRIMITIVE(inst, ctx->simple_mode.dout_tk_ac, token))
+				ERROR_RETURN_LOG(int, "Cannot write the RLS token to the output");
+
+			return 0;
+		}
 		case 'P' | ('U' << 8) | ('T' << 16) | (' ' << 24):
-			{
-				size_t val_size;
-				const char* val = _read_string(inst, ctx->simple_mode.din_tk_ac, &val_size);
+		{
+			if(ctx->options.read_only) 
+				ERROR_RETURN_LOG(int, "Invalid command: cannot write to a readonly database");
+			size_t val_size;
+			const char* val = _read_string(inst, ctx->simple_mode.din_tk_ac, &val_size);
 
-				if(NULL == val) ERROR_RETURN_LOG(int, "Cannot read the input data");
+			if(NULL == val) ERROR_RETURN_LOG(int, "Cannot read the input data");
 
-				if(ERROR_CODE(int) == db_write(ctx->db, cmd + 4, keysize - 4, val, val_size))
-					ERROR_RETURN_LOG(int, "Cannot write Rocksdb");
+			if(ERROR_CODE(int) == db_write(ctx->db, cmd + 4, keysize - 4, val, val_size))
+				ERROR_RETURN_LOG(int, "Cannot write Rocksdb");
 
-				return 0;
-			}
+			return 0;
+		}
 		default:
 			ERROR_RETURN_LOG(int, "Invalid command");
 	}

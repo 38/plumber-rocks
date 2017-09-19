@@ -32,6 +32,9 @@ static int _option(pstd_option_data_t data)
 		case 'A':
 			ctx->async_ops = 1;
 			break;
+		case 'R':
+			ctx->read_only = 1;
+			break;
 		default:
 			ERROR_RETURN_LOG(int, "Invalid command line parameter");
 	}
@@ -141,6 +144,14 @@ static pstd_option_t _options[] = {
 		.short_opt = 'A',
 		.pattern   = "",
 		.description = "If the servlet should operate rocksdb with async processor",
+		.handler   = _option,
+		.args      = NULL
+	},
+	{
+		.long_opt  = "readonly",
+		.short_opt = 'R',
+		.pattern   = "",
+		.description = "If we are opening this database in the readonly mode",
 		.handler   = _option,
 		.args      = NULL
 	}
