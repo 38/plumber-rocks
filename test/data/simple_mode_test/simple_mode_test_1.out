@@ -10,3 +10,4 @@ get_key_1	{"data_out": "1"}
 get_key_3	{"data_out": "3"}
 get_not_exist_key	{"null": null}
 error_input	{"error": null}
+empty_input	{"null":null}

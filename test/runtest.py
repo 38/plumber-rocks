@@ -3,6 +3,8 @@ import sys
 import subprocess
 import signal
 import os
+import tempfile
+import shutil
 def parse_out(outfile, verify, error):
     lines = [line.strip() for line in outfile]
     buf = None
@@ -28,6 +30,7 @@ def parse_out(outfile, verify, error):
     return result
 
 
+dbpath = tempfile.mkdtemp()
 def test_case(script, servlet_dir, case_name):
     def verify(l,o):
         for name in o:
@@ -46,7 +49,8 @@ def test_case(script, servlet_dir, case_name):
             script, 
             servlet_dir , 
             "{case_name}.in".format(case_name = case_name), 
-            "/dev/stdout"]
+            "/dev/stdout",
+            dbpath]
     sys.stderr.write(" ".join(args) + "\n")
     proc = subprocess.Popen(args, stdout = subprocess.PIPE)
     expected = dict([(lambda (x,y): (x, json.loads(y)))(line.strip().split("\t")) for line in open("{case_name}.out".format(case_name = case_name))])
@@ -57,6 +61,8 @@ result = True
 
 for i in sys.argv[2:]:
     result = result and test_case(sys.argv[1], "bin/rocksdb", i)
+
+shutil.rmtree(dbpath)
 
 if not result:
     sys.exit(1)

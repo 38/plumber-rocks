@@ -75,5 +75,9 @@
 }
 .END
 
+.TEXT empty_input
+{}
+.END
+
 .STOP
 

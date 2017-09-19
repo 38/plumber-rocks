@@ -8,7 +8,7 @@ insmod("simulate input=" + argv[2] + " output=" + argv[3] + " label=ROCKSDB");
 runtime.servlet.path = argv[1] + ":" + runtime.servlet.path
 
 to_test = {
-	rocksdb := "rocksdb --path /tmp/test.db --create-db --mode simple --async";
+	rocksdb := "rocksdb --path " + argv[4] + " --create-db --mode simple --async";
 	{
 		(command) -> "command";
 		(data_in) -> "data_in";

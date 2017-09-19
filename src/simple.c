@@ -49,6 +49,8 @@ int simple_sync_exec(simple_t* ctx, pstd_type_instance_t* inst, rocksdb_t* db)
 	if(ERROR_CODE(int) == rls_read_string(inst, ctx->cmd_tk_ac, &cmd, &keysize))
 		ERROR_RETURN_LOG(int, "Cannot read the command string from the RLS");
 
+	if(NULL == cmd) return 0;
+
 	uint32_t val = 0, i;
 	for(i = 0; i < 4 && cmd[i]; i ++)
 		val |= (((uint32_t)cmd[i]) << (i * 8));
@@ -103,6 +105,13 @@ int simple_async_setup(simple_t* ctx, pstd_type_instance_t* inst, rocksdb_t* db,
 	const char* cmd;
 	if(ERROR_CODE(int) == rls_read_string(inst, ctx->cmd_tk_ac, &cmd, &keysize))
 		ERROR_RETURN_LOG(int, "Cannot read the command string from the RLS");
+
+	if(NULL == cmd) 
+	{
+		if(ERROR_CODE(int) == async_cntl(async_handle, ASYNC_CNTL_CANCEL))
+			ERROR_RETURN_LOG(int, "Cannot cancel the async task");
+		return 0;
+	}
 
 	uint32_t val = 0, i;
 	for(i = 0; i < 4 && cmd[i]; i ++)
