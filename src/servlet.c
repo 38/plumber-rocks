@@ -15,19 +15,11 @@
 
 #include <options.h>
 #include <db.h>
+#include <simple.h>
 
 typedef struct {
-	pipe_t      cmd;   /*!< The command pipe */
+	/* TODO */
 } rest_t;
-
-typedef struct {
-	pipe_t                cmd;        /*!< The command pipe */
-	pipe_t                data_in;    /*!< The data pipe */
-	pipe_t                data_out;   /*!< The data output pipe */
-	pstd_type_accessor_t  cmd_tk_ac;  /*!< The command token accessor */
-	pstd_type_accessor_t  din_tk_ac;  /*!< The data input token accessor */
-	pstd_type_accessor_t  dout_tk_ac; /*!< The data output token accessor */
-} simple_t;
 
 typedef struct {
 	options_t          options;              /*!< The options */
@@ -54,43 +46,18 @@ static int _init(uint32_t argc, char const* const* argv, void* ctxbuf)
 	if(NULL == (ctx->type_model = pstd_type_model_new()))
 		ERROR_RETURN_LOG(int, "Cannot create type model for rocksdb servlet");
 
-	if(ctx->options.mode == OPTIONS_REST_MODE)
+	switch(ctx->options.mode)
 	{
-		if(ERROR_CODE(pipe_t) == (ctx->rest_mode.cmd = pipe_define("command", PIPE_INPUT, "plumber/std_servlet/rest/controller/v0/Command")))
-			ERROR_RETURN_LOG(int, "Cannot create command pipe");
-		
-		if(NULL == (ctx->db = db_acquire(&ctx->options)))
-			ERROR_RETURN_LOG(int, "Cannot acquire the DB instance");
+		case OPTIONS_SIMPLE_MODE:
+			if(ERROR_CODE(int) == simple_ctx_init(&ctx->simple_mode, ctx->type_model, ctx->options.read_only))
+				ERROR_RETURN_LOG(int, "Cannot initialize the simple mode context");
+			break;
+		default:
+			ERROR_RETURN_LOG(int, "Invalid Servlet Operation mode");
 	}
-	else if(ctx->options.mode == OPTIONS_SIMPLE_MODE)
-	{
-		if(ERROR_CODE(pipe_t) == (ctx->simple_mode.cmd = pipe_define("command", PIPE_INPUT,     "plumber/std/request_local/String")))
-			ERROR_RETURN_LOG(int, "Cannot create the command pipe");
 
-		if(ctx->options.read_only == 0 && 
-		   ERROR_CODE(pipe_t) == (ctx->simple_mode.data_in = pipe_define("data_in", PIPE_INPUT, "plumber/std/request_local/String")))
-			ERROR_RETURN_LOG(int, "Cannot create the data input pipe");
-
-		if(ERROR_CODE(pipe_t) == (ctx->simple_mode.data_out = pipe_define("data_out", PIPE_OUTPUT, "plumber/std/request_local/String")))
-			ERROR_RETURN_LOG(int, "Cannot create the data output pipe");
-
-		if(ERROR_CODE(pstd_type_accessor_t) == (ctx->simple_mode.cmd_tk_ac = pstd_type_model_get_accessor(ctx->type_model, ctx->simple_mode.cmd, "token")))
-			ERROR_RETURN_LOG(int, "Cannot get the accessor for the RLS token field");
-		
-		if(ctx->options.read_only == 0 &&
-		   ERROR_CODE(pstd_type_accessor_t) == (ctx->simple_mode.din_tk_ac = pstd_type_model_get_accessor(ctx->type_model, ctx->simple_mode.data_in, "token")))
-			ERROR_RETURN_LOG(int, "Cannot get the accessor for the RLS token field");
-		
-		if(ERROR_CODE(pstd_type_accessor_t) == (ctx->simple_mode.dout_tk_ac = pstd_type_model_get_accessor(ctx->type_model, ctx->simple_mode.data_out, "token")))
-			ERROR_RETURN_LOG(int, "Cannot get the accessor for the RLS token field");
-		
-		if(NULL == (ctx->db = db_acquire(&ctx->options)))
-			ERROR_RETURN_LOG(int, "Cannot acquire the DB instance");
-
-	}
-	else
-		ERROR_RETURN_LOG(int, "Fixme: Currently we only support the REST controller mode");
-
+	if(NULL == (ctx->db = db_acquire(&ctx->options)))
+		ERROR_RETURN_LOG(int, "Cannot acquire the DB instance");
 
 	return ctx->options.async_ops ? 1 : 0;
 }
@@ -112,74 +79,6 @@ static int _unload(void* ctxbuf)
 	return rc;
 }
 
-static const char* _read_string(pstd_type_instance_t* inst, pstd_type_accessor_t accessor, size_t* sizebuf)
-{
-	scope_token_t token;
-	if(ERROR_CODE(scope_token_t) == (token = PSTD_TYPE_INST_READ_PRIMITIVE(scope_token_t, inst, accessor)))
-	    ERROR_PTR_RETURN_LOG("Cannot access token field");
-	
-	const pstd_string_t* pstr = pstd_string_from_rls(token);
-	if(NULL == pstr) ERROR_PTR_RETURN_LOG("Cannot retrive string object from the RLS");
-
-	if(sizebuf != NULL) *sizebuf = pstd_string_length(pstr) + 1;
-
-	return pstd_string_value(pstr);
-
-}
-
-static int _do_simple_mode(context_t* ctx, pstd_type_instance_t* inst)
-{
-	size_t keysize;
-	const char* cmd = _read_string(inst, ctx->simple_mode.cmd_tk_ac, &keysize);
-	if(NULL == cmd) ERROR_RETURN_LOG(int, "Cannot read the command string from the RLS");
-
-	uint32_t val = 0, i;
-	for(i = 0; i < 4 && cmd[i]; i ++)
-		val |= (((uint32_t)cmd[i]) << (i * 8));
-
-	switch(val)
-	{
-		case 'G' | ('E' << 8) | ('T' << 16) | (' ' << 24):
-		{
-			char* val;
-			size_t val_size = db_read(ctx->db, cmd + 4, keysize - 4, (void**)&val);
-			if(val_size == ERROR_CODE(size_t)) ERROR_RETURN_LOG(int, "Cannot read data from the RocksDB");
-
-			if(val == NULL) 
-			{
-				LOG_DEBUG("Key not found, exiting");
-				return 0;
-			}
-
-			pstd_string_t* ps = pstd_string_from_onwership_pointer(val, val_size - 1);
-			if(NULL == ps) ERROR_RETURN_LOG(int, "Cannot create result string RLS object");
-
-			scope_token_t token = pstd_string_commit(ps);
-			if(ERROR_CODE(scope_token_t) == token) ERROR_RETURN_LOG(int, "Cannot commit string object to RLS");
-
-			if(ERROR_CODE(int) == PSTD_TYPE_INST_WRITE_PRIMITIVE(inst, ctx->simple_mode.dout_tk_ac, token))
-				ERROR_RETURN_LOG(int, "Cannot write the RLS token to the output");
-
-			return 0;
-		}
-		case 'P' | ('U' << 8) | ('T' << 16) | (' ' << 24):
-		{
-			if(ctx->options.read_only) 
-				ERROR_RETURN_LOG(int, "Invalid command: cannot write to a readonly database");
-			size_t val_size;
-			const char* val = _read_string(inst, ctx->simple_mode.din_tk_ac, &val_size);
-
-			if(NULL == val) ERROR_RETURN_LOG(int, "Cannot read the input data");
-
-			if(ERROR_CODE(int) == db_write(ctx->db, cmd + 4, keysize - 4, val, val_size))
-				ERROR_RETURN_LOG(int, "Cannot write Rocksdb");
-
-			return 0;
-		}
-		default:
-			ERROR_RETURN_LOG(int, "Invalid command");
-	}
-}
 
 static int _exec(void* ctxbuf)
 {
@@ -196,12 +95,12 @@ static int _exec(void* ctxbuf)
 	switch(ctx->options.mode)
 	{
 		case OPTIONS_SIMPLE_MODE:
-			rc = _do_simple_mode(ctx, ti);
+			rc = simple_sync_exec(&ctx->simple_mode, ti, ctx->db);
 			break;
 		default:
 			LOG_ERROR("Invalid mode");
 	}
-
+	
 	if(ERROR_CODE(int) == pstd_type_instance_free(ti))
 		ERROR_RETURN_LOG(int, "Canont dispose the type instance");
 
