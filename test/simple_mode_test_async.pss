@@ -32,7 +32,8 @@ out_def = {
 
 scheduler.worker.nthreads = 1;
 scheduler.async.nthreads = 1;
+scheduler.worker.max_concurrency = 256;
 
-#pipe.simulate.ROCKSDB.events_per_sec = 1000000;
+#pipe.simulate.ROCKSDB.events_per_sec = 50000;
 
 Service.start(Testbed.embed(to_test, in_def, out_def));
