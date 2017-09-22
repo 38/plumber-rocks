@@ -33,6 +33,7 @@ def parse_out(outfile, verify, error):
 dbpath = tempfile.mkdtemp()
 def test_case(script, servlet_dir, case_name):
     def verify(l,o):
+        print l,o
         for name in o:
             if name not in expected[l] or expected[l][name] != o[name]:
                 return False
