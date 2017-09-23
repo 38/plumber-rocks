@@ -2,9 +2,12 @@
 
 [![Build Status](http://plumberserver.com:8123/job/plumber-rocks/badge/icon)](http://plumberserver.com:8123/job/plumber-rocks)
 
-This is the repo for the Plumber-RocksDB binding servlet
+This is the repo for the Plumber-RocksDB binding servlet. The servlet is used as the storage module in a 
+plumber server
 
 ```
+Usage: rocksdb [options] ...
+
   -C  --create-db           Indicates if we need to create the database if it doesn't exist
   -c  --create-timestamp    If we need to add the creation timestamp autoamtically to the data
   -h  --help                Print this help message
